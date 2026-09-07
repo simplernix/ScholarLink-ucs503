@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: scholarlink
+      POSTGRES_PASSWORD: scholarlink
+      POSTGRES_DB: scholarlink
+    ports:
+      - "5432:5432"
+    volumes:
+      # Named volume -- re-running `docker-compose up` never wipes data.
+      - scholarlink_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scholarlink -d scholarlink"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://scholarlink:scholarlink@db:5432/scholarlink
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+    # Idempotent on repeat `up`: apply any pending migrations, then serve.
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  scholarlink_db_data:
