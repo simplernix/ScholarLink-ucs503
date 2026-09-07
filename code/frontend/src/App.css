@@ -1,102 +1,403 @@
-.page {
-  max-width: 420px;
-  margin: 4rem auto;
-  font-family: system-ui, sans-serif;
+/* ================================
+   ScholarLink - Global Styles (Enhanced)
+   ================================ */
+
+:root {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+
+  /* Core palette */
+  --brand: #4f46e5;
+  --brand-dark: #3730a3;
+  --brand-light: #818cf8;
+  --accent: #ec4899;
+  --accent-light: #f9a8d4;
+
+  --text-primary: #1a1f36;
+  --text-secondary: #5b6478;
+  --text-muted: #8b93a7;
+
+  --surface: #ffffff;
+  --surface-soft: #f4f6fb;
+  --border: #e1e5f0;
+  --border-strong: #c7cee0;
+
+  --success: #16a34a;
+  --error: #dc2626;
+
+  color: var(--text-primary);
+  background: var(--surface-soft);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* ================================
+   Main Page
+   ================================ */
+
+.page {
+  position: relative;
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  padding: 40px 20px;
+
+  background:
+    radial-gradient(circle at top left,
+      rgba(79, 70, 229, 0.18),
+      transparent 40%),
+    radial-gradient(circle at bottom right,
+      rgba(236, 72, 153, 0.14),
+      transparent 40%),
+    radial-gradient(circle at 50% 100%,
+      rgba(129, 140, 248, 0.08),
+      transparent 60%),
+    var(--surface-soft);
+}
+
+/* ================================
+   Login Card
+   ================================ */
+
+.page:not(.wide)::before {
+  content: "";
+  position: absolute;
+  width: 430px;
+  max-width: calc(100% - 40px);
+  height: 590px;
+
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+
+  box-shadow:
+    0 25px 70px rgba(79, 70, 229, 0.15),
+    0 8px 24px rgba(23, 32, 51, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
+  z-index: 0;
+}
+
+/* Keep content above card */
+
+.page>* {
+  position: relative;
+  z-index: 1;
+}
+
+/* ================================
+   Logo / Heading
+   ================================ */
+
+.page h1 {
+  margin: 0 0 8px;
+
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -1.2px;
+
+  background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.page:not(.wide) h1::after {
+  content: "Connect • Collaborate • Discover";
+
+  display: block;
+
+  margin-top: 10px;
+
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  color: var(--text-secondary);
+}
+
+/* ================================
+   Tabs
+   ================================ */
 
 .tabs {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: 6px;
+
+  margin: 28px 0 24px;
+
+  padding: 5px;
+
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 14px;
 }
 
+.tabs button {
+  min-width: 105px;
+
+  padding: 10px 18px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: transparent;
+
+  color: var(--text-secondary);
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.tabs button:hover:not(:disabled) {
+  color: var(--brand-dark);
+  background: #ffffff;
+}
+
+.tabs button:disabled {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+  color: #ffffff;
+
+  cursor: default;
+
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.30);
+}
+
+/* ================================
+   Form
+   ================================ */
+
 .form {
+  width: 360px;
+  max-width: 100%;
+
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+
+  gap: 18px;
 }
 
 .form label {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.9rem;
+
+  gap: 7px;
+
+  color: var(--text-primary);
+
+  font-size: 14px;
+  font-weight: 600;
 }
+
+/* ================================
+   Inputs
+   ================================ */
+
+.form input,
+.form select {
+  width: 100%;
+
+  padding: 13px 14px;
+
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+
+  background: #ffffff;
+
+  color: var(--text-primary);
+
+  font-size: 15px;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.form input::placeholder {
+  color: var(--text-muted);
+}
+
+.form input:hover,
+.form select:hover {
+  border-color: var(--border-strong);
+}
+
+.form input:focus,
+.form select:focus {
+  border-color: var(--brand);
+  background: #ffffff;
+
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.14);
+}
+
+/* ================================
+   Submit Button
+   ================================ */
+
+.form button[type="submit"] {
+  width: 100%;
+
+  margin-top: 4px;
+
+  padding: 14px 18px;
+
+  border: none;
+  border-radius: 12px;
+
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+  color: #ffffff;
+
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+
+  cursor: pointer;
+
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.32);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.form button[type="submit"]:hover {
+  background: linear-gradient(135deg, var(--brand-dark) 0%, #2c2680 100%);
+
+  transform: translateY(-2px);
+
+  box-shadow: 0 14px 30px rgba(79, 70, 229, 0.40);
+}
+
+.form button[type="submit"]:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.30);
+}
+
+/* ================================
+   Error Message
+   ================================ */
 
 .error {
-  color: #b00020;
-  font-size: 0.9rem;
+  margin: -4px 0 0;
+
+  padding: 12px 14px;
+
+  border-radius: 10px;
+  border-left: 3px solid var(--error);
+
+  background: #fef2f2;
+  color: var(--error);
+
+  font-size: 13px;
+  font-weight: 500;
 }
 
-.success {
-  color: #1a7d33;
-  font-size: 0.9rem;
-}
+/* ================================
+   Muted Text
+   ================================ */
 
 .muted {
-  color: #666;
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: 14px;
 }
+
+.muted a {
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.muted a:hover {
+  color: var(--brand-dark);
+  text-decoration: underline;
+}
+
+/* ================================
+   Wide / Logged-in Page
+   ================================ */
 
 .page.wide {
-  max-width: 560px;
+  align-items: stretch;
+  justify-content: flex-start;
+
+  max-width: 1000px;
+  margin: 0 auto;
+
+  background: var(--surface-soft);
 }
 
-.upload-page {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #ddd;
+.page.wide h1 {
+  margin-bottom: 8px;
 }
 
-.upload-page textarea,
-.upload-page input {
-  font: inherit;
+/* ================================
+   Scrollbar Polish (optional nice touch)
+   ================================ */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
 
-.typeahead {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+::-webkit-scrollbar-track {
+  background: var(--surface-soft);
 }
 
-.typeahead li button {
-  width: 100%;
-  text-align: left;
-  padding: 0.4rem 0.6rem;
-  background: none;
-  border: none;
-  cursor: pointer;
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
 }
 
-.typeahead li button:hover {
-  background: #f2f2f2;
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-light);
 }
 
-.chip-list {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0;
-  padding: 0;
-}
+/* ================================
+   Responsive Design
+   ================================ */
 
-.chip {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  background: #eef2ff;
-  border-radius: 999px;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.85rem;
-}
+@media (max-width: 600px) {
+  .page {
+    padding: 25px 16px;
+  }
 
-.chip button {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 1rem;
-  line-height: 1;
+  .page:not(.wide)::before {
+    width: calc(100% - 30px);
+  }
+
+  .page h1 {
+    font-size: 30px;
+  }
+
+  .form {
+    width: min(360px, 100%);
+  }
 }
