@@ -1,0 +1,187 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{times}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{parskip}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+
+\title{\textbf{ScholarLink}\\[4pt]
+\large An LLM-Powered Platform for Research Discovery, Topic Extraction, and Academic Collaboration\\[8pt]
+Project Proposal for UCS503}
+\author{
+Hemant Chugh\thanks{Roll No: 1024240042} \and
+Diljeet Kaur\thanks{Roll No: 1024240058} \and
+Saurabh Shivhare\thanks{Roll No: 1024240035} \and
+Divyam\thanks{Roll No: 1024240061}
+}
+\date{
+Branch: Artificial Intelligence \& Machine Learning\\
+Thapar Institute of Engineering and Technology (TIET), Patiala\\
+Course: UCS503 --- Software Engineering\\
+Submission Date: 18 August 2026\\
+GitHub: \url{https://github.com/simplernix/ScholarLink-ucs503.git}
+}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+Research and project work produced within a department is scattered across personal drives, email threads, and printed submissions, with no shared, searchable record of who is working on what. A junior student looking for a mentor, or a student wanting to build on a senior's project, has no reliable way to discover relevant work beyond informal channels. This project proposes ScholarLink, a web platform where professors and students publish research papers and project reports, tag co-authors, and build a public academic profile. A large language model (LLM) reads each uploaded paper to automatically extract the topics/domains it belongs to and generate a concise summary of the future scope of work identified in it, so that other students can discover relevant work by topic and contact the original authors to collaborate or seek guidance.
+
+\section{Problem Statement}
+Departments lack a lightweight, searchable system that connects published student/faculty research to the people best placed to extend it. Existing repositories (departmental drives, printed archives, or general platforms like ResearchGate) either require heavy manual curation, are aimed at large-scale use outside academia, or provide no structured way to identify a paper's future scope and no built-in mechanism for a junior student to request mentorship from a specific author. There is a need for a system where uploading a paper automatically classifies it by topic, surfaces what work remains open, and lets interested students contact the right person directly from the paper's page.
+
+\section{Objectives}
+\begin{itemize}[itemsep=2pt]
+    \item Build a role-based web application (Student, Professor, Admin) with secure JSON Web Token (JWT) authentication.
+    \item Allow professors and students to upload research papers/project reports and tag co-authoring students at upload time.
+    \item Integrate an LLM pipeline that extracts text from the uploaded PDF and returns structured topic tags and a future-scope summary.
+    \item Provide topic-based search and browse so students can discover papers relevant to their interests.
+    \item Build a public profile page for every user summarising their past papers/projects, so junior students can identify potential mentors.
+    \item Implement a collaboration-request workflow so a student can contact an author directly through the platform, with in-app notifications.
+    \item Follow test-driven development (TDD) for the topic-extraction and collaboration-request logic, and automate build-test-deploy with Continuous Integration/Continuous Deployment (CI/CD).
+\end{itemize}
+
+\section{Scope of the Project}
+The system covers the complete lifecycle of a paper within a single institution: user authentication and role management, paper upload with co-author tagging, automated LLM-based topic and future-scope extraction, topic-based search, author profiles, and a collaboration-request workflow with notifications. Scope is limited to a single institution for the first release; cross-institution federation, plagiarism/duplicate-submission detection, and full in-app real-time chat are identified as future extensions and are out of scope for this proposal.
+
+\subsection{Scope Refinement}
+To keep the project deliverable within a single semester without losing academic depth, the initial feature list was narrowed as follows. Collaboration is implemented as a request/accept workflow with a single follow-up message, not a full real-time chat system --- this avoids building a WebSocket-based messaging service that adds implementation effort without adding to the core learning outcomes of the project. A citation-network graph view, showing which papers cite which others, was considered and dropped entirely, since the project already demonstrates NLP-driven insight through topic extraction and future-scope summarisation, and a third analytical feature would not add proportional value. Semantic (embedding-based) search is retained but reclassified as an optional extended feature, to be built only once the core upload, LLM-extraction, and keyword/tag search are complete and stable --- if the project falls behind schedule, this is the first feature to be cut. Topic and future-scope extraction is kept as the core, always-in-scope LLM feature, implemented as a single well-prompted API call per paper rather than a fine-tuned model. This narrower scope keeps the system architecture as a modular monolith (Route $\rightarrow$ Service $\rightarrow$ Repository) rather than true microservices, and keeps notifications in-app rather than adding external message-broker infrastructure such as Kafka or RabbitMQ.
+
+\section{Existing Systems and Their Limitations}
+Platforms such as ResearchGate and Google Scholar index published research at a global scale but are not designed for an internal departmental setting --- they offer no tagging of student co-authors, no institution-specific mentorship workflow, and no automatic summary of a paper's open future work. Institutional repositories typically store PDFs with manual metadata entry and no topic intelligence, so discovery depends entirely on knowing what to search for. Few, if any, of these tools surface the remaining open work from a paper, which is precisely the information a prospective collaborator needs first. ScholarLink targets that gap: automatic topic tagging and future-scope extraction at a scope built specifically for intra-institution discovery and mentorship, rather than global publication indexing.
+
+\section{Proposed System}
+The proposed system is a three-tier web application. A React frontend provides role-specific screens (upload, browse/search, paper detail, profile, requests). A FastAPI backend exposes REST endpoints and enforces business rules in a Route $\rightarrow$ Service $\rightarrow$ Repository layering, keeping business logic out of route handlers so the layers stay orthogonal to one another --- for example, swapping the LLM provider later would only require changes within the LLM service layer. PostgreSQL is the system of record, with SQLAlchemy and Alembic handling ORM mapping and schema migrations. On upload, the backend extracts text from the PDF and enqueues an asynchronous job that calls an LLM API to generate topic tags and a future-scope summary, so uploads are not blocked on API latency; results are written back to the paper's record once ready and the paper becomes searchable.
+
+\subsection{Core Entities}
+The domain model centers on seven entities: User, Paper, PaperAuthor, Topic, PaperTopic, PaperInsight, CollaborationRequest, and Notification. A Paper has one or more PaperAuthor links, each pointing to a User with a role of Owner (the uploading professor/student) or Tagged Student, which is how co-authorship is represented without requiring every collaborator to have uploaded the paper themselves. A Paper is linked to one or more Topics through PaperTopic, which also stores a relevance score returned by the LLM. Each Paper has exactly one PaperInsight record holding the generated summary and future-scope text, which can be regenerated if the paper is updated. A CollaborationRequest links a sending User to a receiving User in the context of a specific Paper, and its status changes trigger a Notification.
+
+\section{Feature List (Module-Wise)}
+
+\subsection{Authentication and User Management}
+\begin{itemize}[itemsep=2pt]
+    \item Login/logout with JWT-based sessions and hashed passwords.
+    \item Role-based access control: Student, Professor, Admin.
+    \item Admin-only user management --- verify institutional email domain, deactivate accounts.
+\end{itemize}
+
+\subsection{Paper and Project Upload}
+\begin{itemize}[itemsep=2pt]
+    \item Upload a research paper or project report (PDF) with title, abstract, and tagged co-author students.
+    \item Version field for updated/revised uploads of the same work.
+    \item Paper status lifecycle: Processing $\rightarrow$ Published, reflecting the async LLM extraction step.
+\end{itemize}
+
+\subsection{LLM-Based Topic and Future-Scope Extraction}
+\begin{itemize}[itemsep=2pt]
+    \item Text extraction from the uploaded PDF (PyMuPDF).
+    \item A single structured LLM call returns: a list of topic tags, a short summary, and a future-scope-of-work paragraph.
+    \item Extracted topics are matched against an existing Topic table where possible, and new topics are created otherwise, to avoid unbounded tag sprawl.
+\end{itemize}
+
+\subsection{Search and Discovery}
+\begin{itemize}[itemsep=2pt]
+    \item Browse and filter papers by topic tag, author, or institution department.
+    \item Keyword search over title, abstract, and generated summary.
+    \item Semantic (embedding-based) search as an optional extended feature.
+\end{itemize}
+
+\subsection{Profiles and Portfolio}
+\begin{itemize}[itemsep=2pt]
+    \item Public profile listing a user's papers/projects, role in each (owner or tagged student), and topic areas of interest.
+    \item Editable bio and areas of expertise, so junior students can identify who to approach for guidance.
+\end{itemize}
+
+\subsection{Collaboration Requests}
+\begin{itemize}[itemsep=2pt]
+    \item A student can send a collaboration/mentorship request to a paper's author with a short message.
+    \item Author can accept or decline; an accepted request reveals contact details for follow-up outside the platform.
+\end{itemize}
+
+\subsection{Notifications}
+\begin{itemize}[itemsep=2pt]
+    \item Event-driven alerts: new collaboration request, request accepted/declined, paper-processing complete.
+    \item In-app notifications first; no external message broker required at this stage.
+\end{itemize}
+
+\subsection{Testing and DevOps}
+\begin{itemize}[itemsep=2pt]
+    \item Unit tests (pytest) for topic-matching, request-status transitions, and access-control logic, following a red $\rightarrow$ green $\rightarrow$ refactor TDD cycle.
+    \item Black-box tests for flows such as login and paper upload, and integration tests across upload $\rightarrow$ extraction $\rightarrow$ search.
+    \item GitHub Actions pipeline: test $\rightarrow$ build $\rightarrow$ deploy on every push.
+\end{itemize}
+
+\section{System Workflow --- Life of a Paper Upload}
+\begin{enumerate}[itemsep=2pt]
+    \item Professor logs in; a JWT is issued with role = Professor.
+    \item Professor opens the upload screen, attaches the PDF, tags co-authoring students, and submits; the frontend calls \texttt{POST /papers}.
+    \item The FastAPI route delegates to the service layer, which stores the file, creates the Paper and PaperAuthor records, and sets status = Processing.
+    \item A background worker extracts text from the PDF and calls the LLM API with a structured prompt requesting topics, a summary, and the future scope of work.
+    \item The service layer matches returned topics against the Topic table (creating new ones where needed), writes the PaperInsight record, and sets status = Published.
+    \item Tagged students and the uploading professor receive a notification that processing is complete.
+    \item A browsing student searches by topic, opens the paper, reads the LLM-generated future-scope summary, and sends a CollaborationRequest to the author.
+    \item The author receives a notification, reviews the request, and accepts or declines it; on acceptance, both parties can see each other's contact details.
+\end{enumerate}
+
+\section{Technology Stack}
+As this is a proposal rather than a final implementation report, Table~\ref{tab:techstack} lists the technology proposed for each layer alongside credible alternatives that were considered. The proposed choice reflects the best fit for a single-semester, single-institution deployment; the alternatives remain open for revision during design review if the team's familiarity, deployment environment, or institutional constraints change.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.4cm}>{\raggedright\arraybackslash}p{5.3cm}>{\raggedright\arraybackslash}p{5.3cm}@{}}
+\toprule
+\textbf{Layer} & \textbf{Proposed Technology} & \textbf{Alternatives Considered} \\
+\midrule
+Frontend & React (Hooks, Router, fetch/axios) & Vue.js; Angular; Next.js \\
+Backend & FastAPI + Pydantic (validation), JWT authentication & Django REST Framework; Flask; Node.js with Express \\
+ORM / Migrations & SQLAlchemy + Alembic & Django ORM; Prisma; raw SQL with a lightweight query builder \\
+Database & PostgreSQL & MySQL / MariaDB; MongoDB (if a document-oriented model were preferred) \\
+File Storage & S3-compatible object storage for uploaded PDFs & Local filesystem storage (for a smaller pilot); Google Cloud Storage; Azure Blob Storage \\
+LLM Layer & Claude/OpenAI API for topic extraction and future-scope summarisation, via an async worker queue & Google Gemini API; a self-hosted open-source model (e.g. Llama-family) for cost/privacy control \\
+Search & PostgreSQL full-text search; pgvector-based semantic search as an optional extended feature & Elasticsearch / OpenSearch; Meilisearch; Typesense \\
+Testing & pytest, TDD, black-box and integration tests & unittest; Postman/Newman for API-level black-box tests \\
+CI/CD & GitHub Actions $\rightarrow$ Docker / Docker Compose $\rightarrow$ deploy & GitLab CI/CD; Jenkins; CircleCI \\
+Version Control & Git/GitHub, feature-branch workflow (\texttt{feature/auth}, \texttt{feature/upload}, \texttt{feature/llm-extraction}, etc.) & GitLab; Bitbucket \\
+\bottomrule
+\end{tabular}
+\caption{Proposed technology stack and alternatives considered.}
+\label{tab:techstack}
+\end{table}
+
+\section{Expected Outcome}
+At the end of this project, the deliverable will be a working, tested ScholarLink platform covering authentication, paper upload with co-author tagging, automated LLM-based topic and future-scope extraction, topic search, public author profiles, and a collaboration-request workflow with notifications. The system will be containerised and deployed via an automated CI/CD pipeline, with unit and integration test coverage over the topic-extraction and collaboration-request logic.
+
+\section{Limitations}
+While ScholarLink addresses a real discovery and mentorship gap within a department, the proposed scope carries a number of known limitations that should be considered alongside the expected outcomes described above.
+
+\begin{itemize}[itemsep=2pt]
+    \item \textbf{Single-institution scope.} The system is designed and evaluated for one institution's user base; cross-institution federation, shared topic taxonomies across departments, and inter-university discovery are not part of this release.
+    \item \textbf{Dependence on external LLM APIs.} Topic tagging and future-scope extraction rely on a third-party LLM provider, so extraction quality, latency, and ongoing cost are outside the project's direct control, and an outage or rate limit on the provider side would pause new-paper processing.
+    \item \textbf{No plagiarism or duplicate-submission detection.} The system does not verify originality or check whether an uploaded paper duplicates existing work, so content integrity ultimately relies on the uploader and institutional policy rather than automated checks.
+    \item \textbf{Text extraction limits.} PDF text extraction is unreliable for scanned or image-only documents and for papers with complex multi-column layouts, figures, or non-English text, which can degrade the quality of the generated topics and summary.
+    \item \textbf{No real-time collaboration.} Collaboration is limited to a request/accept workflow with a single follow-up message rather than in-platform chat, so extended discussion between collaborators still has to move to email or another channel.
+    \item \textbf{Semantic search is an optional extended feature.} Discovery in the base release depends on keyword and tag search; embedding-based semantic search is only delivered if time permits, so some conceptually related papers may not surface unless they share explicit tags or keywords.
+    \item \textbf{Manual verification of AI output.} Generated topics and future-scope summaries are not fact-checked against the paper's actual content beyond the single LLM call, so occasional mis-tagged topics or inaccurate summaries are possible and would need author correction.
+    \item \textbf{Scalability of the modular monolith.} The Route $\rightarrow$ Service $\rightarrow$ Repository monolith is appropriate for a single-department deployment but was not designed for very large, multi-institution traffic; scaling beyond that would require architectural changes such as splitting services or introducing a message broker.
+\end{itemize}
+
+\section{Conclusion}
+This proposal outlines a practical, end-to-end solution to a real problem faced within academic departments --- research and project work that exists but is undiscoverable, and no structured way for junior students to find the right mentor. By layering the system cleanly (Route $\rightarrow$ Service $\rightarrow$ Repository), using the LLM for a single well-scoped extraction task rather than an open-ended assistant, and building collaboration directly into the paper-discovery flow, the project aims to deliver both an academically rigorous software-engineering exercise and a genuinely usable tool.
+
+\section{Overview / Summary}
+ScholarLink is a proposed web platform that gives a department a shared, searchable record of the research and project work happening within it. Professors and students upload papers and project reports, tag co-authors, and build public academic profiles; an LLM automatically extracts topic tags and a future-scope-of-work summary from each upload, so other students can discover relevant work by topic rather than by word of mouth. A built-in collaboration-request workflow then lets an interested student contact the original authors directly, with in-app notifications guiding the exchange from first message to accepted contact.
+
+Architecturally, the system is a three-tier application --- a React frontend, a FastAPI backend organised as Route $\rightarrow$ Service $\rightarrow$ Repository, and PostgreSQL for storage --- kept deliberately as a modular monolith for a single-semester, single-institution scope. Core features include role-based authentication, paper upload with co-author tagging and an async LLM-extraction pipeline, topic-based search, author profiles, and the collaboration-request/notification workflow, all built with test-driven development and a GitHub Actions CI/CD pipeline. Known limitations include reliance on a third-party LLM provider, the absence of plagiarism detection and real-time chat, and unverified AI-generated summaries --- trade-offs made deliberately to keep the project achievable within one semester while still delivering a genuinely useful tool for intra-institution research discovery and mentorship.
+
+\end{document}
