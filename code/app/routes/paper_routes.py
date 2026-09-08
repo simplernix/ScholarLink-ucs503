@@ -10,18 +10,27 @@ from app.core.exceptions import PaperFileMissingError, PaperNotFoundError
 from app.core.storage import UploadStorage
 from app.models.user import User
 from app.repositories.paper_repository import PaperRepository
+from app.repositories.topic_repository import TopicRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.paper import PaperOut, paper_to_out
+from app.services.groq_service import GroqService
 from app.services.paper_service import PaperService
 
 router = APIRouter(prefix="/papers", tags=["papers"])
 
 
 def get_paper_service(db: Session = Depends(get_db)) -> PaperService:
-    # Read settings.UPLOAD_DIR at call time (not import time) so tests can
-    # point it at a temp directory per-test via monkeypatch.
+    # Read settings.UPLOAD_DIR at call time so tests can point it
+    # at a temporary directory.
     storage = UploadStorage(settings.UPLOAD_DIR)
-    return PaperService(PaperRepository(db), UserRepository(db), storage)
+
+    return PaperService(
+        paper_repository=PaperRepository(db),
+        user_repository=UserRepository(db),
+        topic_repository=TopicRepository(db),
+        storage=storage,
+        groq_service=GroqService(),
+    )
 
 
 def _parse_co_author_ids(raw: str | None) -> list[uuid.UUID]:
