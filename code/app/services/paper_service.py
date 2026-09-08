@@ -10,6 +10,8 @@ from app.models.paper import Paper
 from app.models.user import User
 from app.repositories.paper_repository import PaperRepository
 from app.repositories.user_repository import UserRepository
+from app.repositories.topic_repository import TopicRepository
+from app.services.groq_service import GroqService
 from app.services.pdf_extraction import extract_pdf_text
 
 DEFAULT_DEDUPE_WINDOW_SECONDS = 10
@@ -21,10 +23,14 @@ class PaperService:
         paper_repository: PaperRepository,
         user_repository: UserRepository,
         storage: UploadStorage,
+        topic_repository: TopicRepository,
+        groq_service: GroqService,
     ):
         self.papers = paper_repository
         self.users = user_repository
         self.storage = storage
+        self.topics = topic_repository
+        self.groq = groq_service
 
     def create_paper(
         self,
@@ -76,16 +82,43 @@ class PaperService:
         return self.papers.get_by_id(paper.id)
 
     def extract_text(self, paper_id: uuid.UUID) -> Paper:
-        """Extracts text from the paper's stored PDF and writes it onto the
-        existing Paper row (upsert-by-update). Safe to call repeatedly --
-        each call overwrites `extracted_text` rather than appending to it
-        or creating a new record, so a retried job never double-processes."""
         paper = self.papers.get_by_id(paper_id)
-        if paper is None:
-            raise PaperNotFoundError(f"No paper with id {paper_id}")
-        if not paper.file_storage_key or not self.storage.exists(paper.file_storage_key):
-            raise PaperFileMissingError(f"No stored file for paper {paper_id}")
 
+        if paper is None:
+           raise PaperNotFoundError(f"No paper with id {paper_id}")
+
+        if not paper.file_storage_key or not self.storage.exists(
+           paper.file_storage_key
+        ):
+           raise PaperFileMissingError(f"No stored file for paper {paper_id}")
+
+        # 1. Read the stored PDF
         file_bytes = self.storage.read(paper.file_storage_key)
+
+        # 2. Extract text from PDF
         text = extract_pdf_text(file_bytes)
-        return self.papers.update_extracted_text(paper.id, text)
+
+        # 3. Save extracted text
+        paper = self.papers.update_extracted_text(paper.id, text)
+
+        # 4. Ask Groq for research topics
+        topics = self.groq.extract_topics(text)
+
+        # 5. Save/link topics
+        for topic_name in topics:
+            normalized_name = " ".join(topic_name.lower().split())
+
+            topic = self.topics.get_by_normalized_name(normalized_name)
+
+            if topic is None:
+                topic = self.topics.create(
+                    name=topic_name,
+                    normalized_name=normalized_name,
+                )
+
+            self.topics.add_paper_link(
+                paper_id=paper.id,
+                topic_id=topic.id,
+            )
+
+        return self.papers.get_by_id(paper.id)

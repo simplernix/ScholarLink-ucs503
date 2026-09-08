@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # File storage (used starting Phase 2)
     UPLOAD_DIR: str = "./uploads"
 
+    # Groq
+    GROQ_API_KEY: str = ""
+
     # App
     ENVIRONMENT: str = "development"
 
